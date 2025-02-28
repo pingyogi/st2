@@ -59,6 +59,11 @@ CONFIG_FILE_OPTIONS = {
         "username": {"type": "string", "default": None},
         "password": {"type": "string", "default": None},
         "api_key": {"type": "string", "default": None},
+        "basic_auth": {
+            # Basic auth credentials in username:password notation
+            "type": "string",
+            "default": None,
+        },
     },
     "api": {"url": {"type": "string", "default": None}},
     "auth": {"url": {"type": "string", "default": None}},
@@ -111,7 +116,7 @@ class CLIConfigParser(object):
         if self.validate_config_permissions:
             # Make sure the directory permissions == 0o770
             if bool(os.stat(config_dir_path).st_mode & 0o7):
-                self.LOG.warn(
+                self.LOG.warning(
                     "The StackStorm configuration directory permissions are "
                     "insecure (too permissive): others have access."
                 )
@@ -125,15 +130,14 @@ class CLIConfigParser(object):
 
             # Make sure the file permissions == 0o660
             if bool(os.stat(self.config_file_path).st_mode & 0o7):
-                self.LOG.warn(
+                self.LOG.warning(
                     "The StackStorm configuration file permissions are "
                     "insecure: others have access."
                 )
 
         config = ConfigParser()
         with io.open(self.config_file_path, "r", encoding="utf8") as fp:
-            config.readfp(fp)
-
+            config.read_file(fp)
         for section, keys in six.iteritems(CONFIG_FILE_OPTIONS):
             for key, options in six.iteritems(keys):
                 key_type = options["type"]

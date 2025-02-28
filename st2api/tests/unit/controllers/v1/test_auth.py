@@ -18,16 +18,18 @@ import datetime
 
 import bson
 import mock
+from oslo_config import cfg
 
 from st2tests.api import FunctionalTest
 from st2common.util import date as date_utils
 from st2common.models.db.auth import ApiKeyDB, TokenDB, UserDB
 from st2common.persistence.auth import ApiKey, Token, User
 from st2common.exceptions.auth import TokenNotFoundError
+from st2tests.fixtures.generic.fixture import PACK_NAME as FIXTURES_PACK
 from st2tests.fixturesloader import FixturesLoader
 
 OBJ_ID = bson.ObjectId()
-USER = "stanley"
+USER = cfg.CONF.system_user.user
 USER_DB = UserDB(name=USER)
 TOKEN = uuid.uuid4().hex
 NOW = date_utils.get_datetime_utc_now()
@@ -77,6 +79,63 @@ class TestTokenBasedAuth(FunctionalTest):
         ),
     )
     @mock.patch.object(User, "get_by_name", mock.Mock(return_value=USER_DB))
+    def test_token_validation_token_in_query_params_auth_cookie_is_set(self):
+        response = self.app.get(
+            "/v1/actions?x-auth-token=%s" % (TOKEN), expect_errors=False
+        )
+        self.assertIn("application/json", response.headers["content-type"])
+        self.assertEqual(response.status_int, 200)
+        self.assertTrue("Set-Cookie" in response.headers)
+        self.assertTrue("HttpOnly" in response.headers["Set-Cookie"])
+
+        # Also test same cookie values + secure
+        valid_values = ["strict", "lax", "none", "unset"]
+
+        for value in valid_values:
+            cfg.CONF.set_override(
+                group="api", name="auth_cookie_same_site", override=value
+            )
+            cfg.CONF.set_override(group="api", name="auth_cookie_secure", override=True)
+
+            response = self.app.get(
+                "/v1/actions?x-auth-token=%s" % (TOKEN), expect_errors=False
+            )
+            self.assertIn("application/json", response.headers["content-type"])
+            self.assertEqual(response.status_int, 200)
+            self.assertTrue("Set-Cookie" in response.headers)
+            self.assertTrue("HttpOnly" in response.headers["Set-Cookie"])
+
+            if value == "unset":
+                self.assertFalse("SameSite" in response.headers["Set-Cookie"])
+            else:
+                self.assertTrue(
+                    "SameSite=%s" % (value) in response.headers["Set-Cookie"]
+                )
+
+            self.assertTrue("secure" in response.headers["Set-Cookie"])
+
+        # SameSite=Lax, Secure=False
+        cfg.CONF.set_override(group="api", name="auth_cookie_same_site", override="lax")
+        cfg.CONF.set_override(group="api", name="auth_cookie_secure", override=False)
+
+        response = self.app.get(
+            "/v1/actions?x-auth-token=%s" % (TOKEN), expect_errors=False
+        )
+        self.assertIn("application/json", response.headers["content-type"])
+        self.assertEqual(response.status_int, 200)
+        self.assertTrue("Set-Cookie" in response.headers)
+        self.assertTrue("HttpOnly" in response.headers["Set-Cookie"])
+        self.assertTrue("SameSite=lax" in response.headers["Set-Cookie"])
+        self.assertTrue("secure" not in response.headers["Set-Cookie"])
+
+    @mock.patch.object(
+        Token,
+        "get",
+        mock.Mock(
+            return_value=TokenDB(id=OBJ_ID, user=USER, token=TOKEN, expiry=FUTURE)
+        ),
+    )
+    @mock.patch.object(User, "get_by_name", mock.Mock(return_value=USER_DB))
     def test_token_validation_token_in_cookies(self):
         response = self.app.get(
             "/v1/actions", headers={"X-Auth-Token": TOKEN}, expect_errors=False
@@ -114,8 +173,6 @@ class TestTokenBasedAuth(FunctionalTest):
         self.assertIn("application/json", response.headers["content-type"])
         self.assertEqual(response.status_int, 401)
 
-
-FIXTURES_PACK = "generic"
 
 TEST_MODELS = {"apikeys": ["apikey1.yaml", "apikey_disabled.yaml"]}
 
@@ -188,7 +245,7 @@ class TestApiKeyBasedAuth(FunctionalTest):
         )
         self.assertIn("application/json", response.headers["content-type"])
         self.assertEqual(response.status_int, 401)
-        self.assertRegexpMatches(
+        self.assertRegex(
             response.json_body["faultstring"],
             "^Unauthorized - ApiKey with key_hash=([a-zA-Z0-9]+) not found.$",
         )

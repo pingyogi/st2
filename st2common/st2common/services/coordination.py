@@ -15,6 +15,8 @@
 
 from __future__ import absolute_import
 
+import sys
+
 import six
 
 from oslo_config import cfg
@@ -138,7 +140,10 @@ class NoOpDriver(coordination.CoordinationDriver):
 
     @classmethod
     def delete_group(cls, group_id):
-        del cls.groups[group_id]
+        try:
+            del cls.groups[group_id]
+        except KeyError:
+            raise GroupNotCreated(group_id)
         return NoOpAsyncResult()
 
     @classmethod
@@ -241,9 +246,17 @@ def get_coordinator(start_heart=True, use_cache=True):
     global COORDINATOR
 
     if not configured():
-        LOG.warn(
+        extra_msg = ""
+        # sys._called_from_test set in conftest.py for pytest runs
+        if "nose" in sys.modules.keys() or hasattr(sys, "_called_from_test"):
+            extra_msg = (
+                " Set ST2TESTS_REDIS_HOST and ST2TESTS_REDIS_PORT env vars to "
+                "configure the coordination backend for unit and integration tests."
+            )
+        LOG.warning(
             "Coordination backend is not configured. Code paths which use coordination "
             "service will use best effort approach and race conditions are possible."
+            f"{extra_msg}"
         )
 
     if not use_cache:
@@ -277,3 +290,11 @@ def get_member_id():
     proc_info = system_info.get_process_info()
     member_id = six.b("%s_%d" % (proc_info["hostname"], proc_info["pid"]))
     return member_id
+
+
+def get_group_id(service):
+    if not isinstance(service, six.binary_type):
+        group_id = service.encode("utf-8")
+    else:
+        group_id = service
+    return group_id

@@ -14,6 +14,11 @@
 # limitations under the License.
 
 from __future__ import absolute_import
+
+from st2common.util.monkey_patch import monkey_patch
+
+monkey_patch()
+
 import os
 import sys
 import logging
@@ -193,13 +198,14 @@ def register_sensors():
     fail_on_failure = not cfg.CONF.register.no_fail_on_failure
 
     registered_count = 0
+    overridden_count = 0
 
     try:
         LOG.info("=========================================================")
         LOG.info("############## Registering sensors ######################")
         LOG.info("=========================================================")
         with Timer(key="st2.register.sensors"):
-            registered_count = sensors_registrar.register_sensors(
+            (registered_count, overridden_count) = sensors_registrar.register_sensors(
                 pack_dir=pack_dir, fail_on_failure=fail_on_failure
             )
     except Exception as e:
@@ -210,6 +216,7 @@ def register_sensors():
             raise e
 
     LOG.info("Registered %s sensors." % (registered_count))
+    LOG.info("%s sensors had their metadata overridden." % (overridden_count))
 
 
 def register_runners():
@@ -245,13 +252,14 @@ def register_actions():
     fail_on_failure = not cfg.CONF.register.no_fail_on_failure
 
     registered_count = 0
+    overridden_count = 0
 
     try:
         LOG.info("=========================================================")
         LOG.info("############## Registering actions ######################")
         LOG.info("=========================================================")
         with Timer(key="st2.register.actions"):
-            registered_count = actions_registrar.register_actions(
+            registered_count, overridden_count = actions_registrar.register_actions(
                 pack_dir=pack_dir,
                 fail_on_failure=fail_on_failure,
                 use_runners_cache=True,
@@ -264,6 +272,7 @@ def register_actions():
             raise e
 
     LOG.info("Registered %s actions." % (registered_count))
+    LOG.info("%s actions had their metadata overridden." % (overridden_count))
 
 
 def register_rules():
@@ -272,6 +281,7 @@ def register_rules():
     fail_on_failure = not cfg.CONF.register.no_fail_on_failure
 
     registered_count = 0
+    overridden_count = 0
 
     try:
         LOG.info("=========================================================")
@@ -284,7 +294,7 @@ def register_rules():
 
     try:
         with Timer(key="st2.register.rules"):
-            registered_count = rules_registrar.register_rules(
+            registered_count, overridden_count = rules_registrar.register_rules(
                 pack_dir=pack_dir, fail_on_failure=fail_on_failure
             )
     except Exception as e:
@@ -295,6 +305,7 @@ def register_rules():
             raise e
 
     LOG.info("Registered %s rules.", registered_count)
+    LOG.info("%s rules had their metadata overridden." % (overridden_count))
 
 
 def register_aliases():
@@ -302,13 +313,14 @@ def register_aliases():
     fail_on_failure = not cfg.CONF.register.no_fail_on_failure
 
     registered_count = 0
+    overridden_count = 0
 
     try:
         LOG.info("=========================================================")
         LOG.info("############## Registering aliases ######################")
         LOG.info("=========================================================")
         with Timer(key="st2.register.aliases"):
-            registered_count = aliases_registrar.register_aliases(
+            registered_count, overridden_count = aliases_registrar.register_aliases(
                 pack_dir=pack_dir, fail_on_failure=fail_on_failure
             )
     except Exception as e:
@@ -318,6 +330,7 @@ def register_aliases():
         LOG.warning("Failed to register aliases.", exc_info=True)
 
     LOG.info("Registered %s aliases.", registered_count)
+    LOG.info("%s aliases had their metadata overridden." % (overridden_count))
 
 
 def register_policies():

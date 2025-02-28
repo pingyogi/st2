@@ -21,10 +21,11 @@ import eventlet
 from kombu.mixins import ConsumerMixin
 from oslo_config import cfg
 
-from st2common.models.api.action import LiveActionAPI
+from st2common.models.api.action import LiveActionAPI, ActionAliasAPI
 from st2common.models.api.execution import ActionExecutionAPI
 from st2common.models.api.execution import ActionExecutionOutputAPI
 from st2common.transport import utils as transport_utils
+from st2common.transport.queues import STREAM_ACTIONALIAS_QUEUE
 from st2common.transport.queues import STREAM_ANNOUNCEMENT_WORK_QUEUE
 from st2common.transport.queues import STREAM_EXECUTION_ALL_WORK_QUEUE
 from st2common.transport.queues import STREAM_EXECUTION_UPDATE_WORK_QUEUE
@@ -57,9 +58,15 @@ class BaseListener(ConsumerMixin):
         raise NotImplementedError("get_consumers() is not implemented")
 
     def processor(self, model=None):
+        exchange_prefix = cfg.CONF.messaging.prefix
+
         def process(body, message):
             meta = message.delivery_info
-            event_name = "%s__%s" % (meta.get("exchange"), meta.get("routing_key"))
+            event_prefix = meta.get("exchange", "")
+            if exchange_prefix != "st2" and event_prefix.startswith(exchange_prefix):
+                # use well-known event names over configurable exchange names
+                event_prefix = event_prefix.replace(f"{exchange_prefix}.", "st2.", 1)
+            event_name = f"{event_prefix}__{meta.get('routing_key')}"
 
             try:
                 if model:
@@ -201,6 +208,11 @@ class StreamListener(BaseListener):
 
     def get_consumers(self, consumer, channel):
         return [
+            consumer(
+                queues=[STREAM_ACTIONALIAS_QUEUE],
+                accept=["pickle"],
+                callbacks=[self.processor(ActionAliasAPI)],
+            ),
             consumer(
                 queues=[STREAM_ANNOUNCEMENT_WORK_QUEUE],
                 accept=["pickle"],

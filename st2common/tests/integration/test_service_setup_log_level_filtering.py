@@ -21,37 +21,36 @@ import signal
 import eventlet
 from eventlet.green import subprocess
 
+import st2tests.config
 from st2tests.base import IntegrationTestCase
-from st2tests.fixturesloader import get_fixtures_base_path
+from st2tests.fixtures.conf.fixture import FIXTURE_PATH as CONF_FIXTURES_PATH
 
 __all__ = ["ServiceSetupLogLevelFilteringTestCase"]
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
-FIXTURES_DIR = get_fixtures_base_path()
-
 ST2_CONFIG_INFO_LL_PATH = os.path.join(
-    FIXTURES_DIR, "conf/st2.tests.api.info_log_level.conf"
+    CONF_FIXTURES_PATH, "st2.tests.api.info_log_level.conf"
 )
 ST2_CONFIG_INFO_LL_PATH = os.path.abspath(ST2_CONFIG_INFO_LL_PATH)
 
 ST2_CONFIG_DEBUG_LL_PATH = os.path.join(
-    FIXTURES_DIR, "conf/st2.tests.api.debug_log_level.conf"
+    CONF_FIXTURES_PATH, "st2.tests.api.debug_log_level.conf"
 )
 ST2_CONFIG_DEBUG_LL_PATH = os.path.abspath(ST2_CONFIG_DEBUG_LL_PATH)
 
 ST2_CONFIG_AUDIT_LL_PATH = os.path.join(
-    FIXTURES_DIR, "conf/st2.tests.api.audit_log_level.conf"
+    CONF_FIXTURES_PATH, "st2.tests.api.audit_log_level.conf"
 )
 ST2_CONFIG_AUDIT_LL_PATH = os.path.abspath(ST2_CONFIG_AUDIT_LL_PATH)
 
 ST2_CONFIG_SYSTEM_DEBUG_PATH = os.path.join(
-    FIXTURES_DIR, "conf/st2.tests.api.system_debug_true.conf"
+    CONF_FIXTURES_PATH, "st2.tests.api.system_debug_true.conf"
 )
 ST2_CONFIG_SYSTEM_DEBUG_PATH = os.path.abspath(ST2_CONFIG_SYSTEM_DEBUG_PATH)
 
 ST2_CONFIG_SYSTEM_LL_DEBUG_PATH = os.path.join(
-    FIXTURES_DIR, "conf/st2.tests.api.system_debug_true_logging_debug.conf"
+    CONF_FIXTURES_PATH, "st2.tests.api.system_debug_true_logging_debug.conf"
 )
 
 PYTHON_BINARY = sys.executable
@@ -225,13 +224,18 @@ class ServiceSetupLogLevelFilteringTestCase(IntegrationTestCase):
         stdout = "\n".join(process.stdout.read().decode("utf-8").split("\n"))
         self.assertNotIn("heartbeat_tick", stdout)
 
-    def _start_process(self, config_path, env=None):
+    @staticmethod
+    def _start_process(config_path, env=None):
         cmd = CMD + [config_path]
         cwd = os.path.abspath(os.path.join(BASE_DIR, "../../../"))
         cwd = os.path.abspath(cwd)
+        env = env or os.environ.copy()
+        env.update(st2tests.config.db_opts_as_env_vars())
+        env.update(st2tests.config.mq_opts_as_env_vars())
+        env.update(st2tests.config.coord_opts_as_env_vars())
         process = subprocess.Popen(
             cmd,
-            env=env or os.environ.copy(),
+            env=env,
             cwd=cwd,
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,

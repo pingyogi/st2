@@ -19,6 +19,7 @@ import copy
 import mock
 
 from orquesta import statuses as wf_statuses
+from oslo_config import cfg
 
 import st2tests
 
@@ -41,18 +42,12 @@ from st2common.services import workflows as wf_svc
 from st2common.transport import liveaction as lv_ac_xport
 from st2common.transport import workflow as wf_ex_xport
 from st2common.transport import publishers
+from st2tests.fixtures.packs.core.fixture import PACK_PATH as CORE_PACK_PATH
+from st2tests.fixtures.packs.orquesta_tests.fixture import PACK_PATH as TEST_PACK_PATH
 from st2tests.mocks import liveaction as mock_lv_ac_xport
 from st2tests.mocks import workflow as mock_wf_ex_xport
 
-TEST_PACK = "orquesta_tests"
-TEST_PACK_PATH = (
-    st2tests.fixturesloader.get_fixtures_packs_base_path() + "/" + TEST_PACK
-)
-
-PACKS = [
-    TEST_PACK_PATH,
-    st2tests.fixturesloader.get_fixtures_packs_base_path() + "/core",
-]
+PACKS = [TEST_PACK_PATH, CORE_PACK_PATH]
 
 
 @mock.patch.object(
@@ -131,7 +126,7 @@ class OrquestaContextTest(st2tests.ExecutionDbTestCase):
         expected_st2_ctx = {
             "action_execution_id": str(ac_ex_db.id),
             "api_url": "http://127.0.0.1/v1",
-            "user": "stanley",
+            "user": cfg.CONF.system_user.user,
             "pack": "orquesta_tests",
             "action": "orquesta_tests.runtime-context",
             "runner": "orquesta",
@@ -214,9 +209,10 @@ class OrquestaContextTest(st2tests.ExecutionDbTestCase):
         self.assertEqual(wf_ex_db.status, wf_statuses.SUCCEEDED)
         self.assertEqual(lv_ac_db.status, ac_const.LIVEACTION_STATUS_SUCCEEDED)
 
+        user = cfg.CONF.system_user.user
         # Check result.
         expected_result = {
-            "output": {"msg": "stanley, All your base are belong to us!"}
+            "output": {"msg": f"{user}, All your base are belong to us!"}
         }
 
         self.assertDictEqual(lv_ac_db.result, expected_result)

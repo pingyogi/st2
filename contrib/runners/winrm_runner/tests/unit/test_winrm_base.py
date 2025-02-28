@@ -304,7 +304,9 @@ class WinRmBaseTestCase(RunnerTestCase):
 
         self.assertEqual(result.__dict__, expected_response.__dict__)
         mock_protocol.open_shell.assert_called_with(
-            env_vars={"PATH": "C:\\st2\\bin"}, working_directory="C:\\st2"
+            working_directory="C:\\st2",
+            env_vars={"PATH": "C:\\st2\\bin"},
+            codepage=65001,
         )
         mock_protocol.run_command.assert_called_with(
             123, "fake-command", ["arg1", "arg2"]
@@ -336,7 +338,9 @@ class WinRmBaseTestCase(RunnerTestCase):
 
         self.assertEqual(result.__dict__, expected_response.__dict__)
         mock_protocol.open_shell.assert_called_with(
-            env_vars={"PATH": "C:\\st2\\bin"}, working_directory="C:\\st2"
+            working_directory="C:\\st2",
+            env_vars={"PATH": "C:\\st2\\bin"},
+            codepage=65001,
         )
         mock_protocol.run_command.assert_called_with(
             123, "fake-command", ["arg1", "arg2"]
@@ -909,7 +913,7 @@ Add-Content -value $data -encoding byte -path $filePath
         mock_tmp_script.assert_called_with(
             "[System.IO.Path]::GetTempPath()", "$PSVersionTable"
         )
-        mock_run_ps.assert_called_with("& {C:\\tmpscript.ps1}")
+        mock_run_ps.assert_called_with("C:\\tmpscript.ps1")
 
     @mock.patch("winrm_runner.winrm_base.WinRmBaseRunner._run_ps")
     @mock.patch("winrm_runner.winrm_base.WinRmBaseRunner._tmp_script")
@@ -923,7 +927,7 @@ Add-Content -value $data -encoding byte -path $filePath
         mock_tmp_script.assert_called_with(
             "[System.IO.Path]::GetTempPath()", "Get-ChildItem"
         )
-        mock_run_ps.assert_called_with("& {C:\\tmpscript.ps1} -param1 value1 arg1")
+        mock_run_ps.assert_called_with("C:\\tmpscript.ps1 -param1 value1 arg1")
 
     @mock.patch("winrm_runner.winrm_base.WinRmBaseRunner._run_ps")
     def test__run_ps_or_raise(self, mock_run_ps):

@@ -20,10 +20,8 @@ import uuid
 
 from oslo_config import cfg
 
-# XXX: actionsensor import depends on config being setup.
-import st2tests.config as tests_config
-
-tests_config.parse_args()
+# This import must be early for import-time side-effects.
+from st2tests import ExecutionDbTestCase
 
 from st2common.constants import action as action_constants
 from st2common.models.api.action import ActionAPI
@@ -36,7 +34,7 @@ from st2common.services import action as action_service
 from st2common.services import trace as trace_service
 from st2common.transport.liveaction import LiveActionPublisher
 from st2common.transport.publishers import CUDPublisher
-from st2tests import ExecutionDbTestCase
+from st2tests.fixtures.generic.fixture import PACK_NAME as PACK
 from st2tests.fixturesloader import FixturesLoader
 from st2tests.mocks.execution import MockExecutionPublisher
 from st2tests.mocks.liveaction import MockLiveActionPublisher
@@ -47,7 +45,6 @@ __all__ = ["ExecutionCancellationTestCase"]
 
 TEST_FIXTURES = {"actions": ["action1.yaml"]}
 
-PACK = "generic"
 LOADER = FixturesLoader()
 FIXTURES = LOADER.load_fixtures(fixtures_pack=PACK, fixtures_dict=TEST_FIXTURES)
 

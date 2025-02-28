@@ -14,6 +14,12 @@
 # limitations under the License.
 
 from __future__ import absolute_import
+
+# pytest: make sure monkey_patching happens before importing mongoengine
+from st2common.util.monkey_patch import monkey_patch
+
+monkey_patch()
+
 from datetime import timedelta
 
 from st2common import log as logging
@@ -49,7 +55,7 @@ class TestPurgeTriggerInstances(CleanDbTestCase):
 
         self.assertEqual(len(TriggerInstance.get_all()), 1)
         expected_msg = "Specify a valid timestamp"
-        self.assertRaisesRegexp(
+        self.assertRaisesRegex(
             ValueError,
             expected_msg,
             purge_trigger_instances,

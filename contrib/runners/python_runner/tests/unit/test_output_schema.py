@@ -44,10 +44,14 @@ MOCK_SYS.executable = sys.executable
 MOCK_EXECUTION = mock.Mock()
 MOCK_EXECUTION.id = "598dbf0c0640fd54bffc688b"
 
-FAIL_SCHEMA = {
-    "notvalid": {
-        "type": "string",
+FAIL_OUTPUT_SCHEMA = {
+    "type": "object",
+    "properties": {
+        "notvalid": {
+            "type": "string",
+        },
     },
+    "additionalProperties": False,
 }
 
 
@@ -62,7 +66,7 @@ class PythonRunnerTestCase(RunnerTestCase, CleanDbTestCase):
         assert_submodules_are_checked_out()
 
     def test_adherence_to_output_schema(self):
-        config = self.loader(os.path.join(BASE_DIR, "../../runner.yaml"))
+        config = self.loader(os.path.join(BASE_DIR, "../../python_runner/runner.yaml"))
         runner = self._get_mock_runner_obj()
         runner.entry_point = PASCAL_ROW_ACTION_PATH
         runner.pre_run()
@@ -78,7 +82,7 @@ class PythonRunnerTestCase(RunnerTestCase, CleanDbTestCase):
         runner.pre_run()
         (status, output, _) = runner.run({"row_index": 5})
         with self.assertRaises(jsonschema.ValidationError):
-            output_schema._validate_runner(FAIL_SCHEMA, output)
+            output_schema._validate_runner(FAIL_OUTPUT_SCHEMA, output)
 
     def _get_mock_runner_obj(self, pack=None, sandbox=None):
         runner = python_runner.get_runner()

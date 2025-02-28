@@ -14,10 +14,11 @@
 # limitations under the License.
 
 from __future__ import absolute_import
-import unittest2
+import unittest
 
 from st2common import operators
 from st2common.util import date as date_utils
+import st2tests.config as tests_config
 
 
 def list_of_dicts_strict_equal(lofd1, lofd2):
@@ -37,7 +38,7 @@ def list_of_dicts_strict_equal(lofd1, lofd2):
     return not t2
 
 
-class ListOfDictsStrictEqualTest(unittest2.TestCase):
+class ListOfDictsStrictEqualTest(unittest.TestCase):
     """
     Tests list_of_dicts_strict_equal
 
@@ -156,7 +157,12 @@ class ListOfDictsStrictEqualTest(unittest2.TestCase):
         )
 
 
-class SearchOperatorTest(unittest2.TestCase):
+class SearchOperatorTest(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        super().setUpClass()
+        tests_config.parse_args()
+
     # The search command extends the rules engine into being a recursive descent
     # parser. As such, its tests are much more complex than other commands, so we
     # pull its tests out into their own test case.
@@ -564,8 +570,205 @@ class SearchOperatorTest(unittest2.TestCase):
             ],
         )
 
+    def _test_function(self, criterion_k, criterion_v, payload_lookup):
+        op = operators.get_operator(criterion_v["type"])
+        return op(payload_lookup.get_value("item.to_value")[0], criterion_v["pattern"])
 
-class OperatorTest(unittest2.TestCase):
+    def test_search_any2any(self):
+        # true if any payload items match any criteria
+        op = operators.get_operator("search")
+
+        payload = [
+            {
+                "field_name": "waterLevel",
+                "to_value": 30,
+            },
+            {
+                "field_name": "waterLevel",
+                "to_value": 45,
+            },
+        ]
+
+        criteria_pattern = {
+            "item.waterLevel#1": {
+                "type": "lessthan",
+                "pattern": 40,
+            },
+            "item.waterLevel#2": {
+                "type": "greaterthan",
+                "pattern": 50,
+            },
+        }
+
+        result = op(payload, criteria_pattern, "any2any", self._test_function)
+        self.assertTrue(result)
+
+        payload[0]["to_value"] = 44
+
+        result = op(payload, criteria_pattern, "any2any", self._test_function)
+        self.assertFalse(result)
+
+    def test_search_any(self):
+        # true if any payload items match all criteria
+        op = operators.get_operator("search")
+        payload = [
+            {
+                "field_name": "waterLevel",
+                "to_value": 45,
+            },
+            {
+                "field_name": "waterLevel",
+                "to_value": 20,
+            },
+        ]
+
+        criteria_pattern = {
+            "item.waterLevel#1": {
+                "type": "greaterthan",
+                "pattern": 40,
+            },
+            "item.waterLevel#2": {
+                "type": "lessthan",
+                "pattern": 50,
+            },
+            "item.waterLevel#3": {
+                "type": "equals",
+                "pattern": 46,
+            },
+        }
+
+        result = op(payload, criteria_pattern, "any", self._test_function)
+        self.assertFalse(result)
+
+        payload[0]["to_value"] = 46
+
+        result = op(payload, criteria_pattern, "any", self._test_function)
+        self.assertTrue(result)
+
+        payload[0]["to_value"] = 45
+        del criteria_pattern["item.waterLevel#3"]
+
+        result = op(payload, criteria_pattern, "any", self._test_function)
+        self.assertTrue(result)
+
+    def test_search_all2any(self):
+        # true if all payload items match any criteria
+        op = operators.get_operator("search")
+        payload = [
+            {
+                "field_name": "waterLevel",
+                "to_value": 45,
+            },
+            {
+                "field_name": "waterLevel",
+                "to_value": 20,
+            },
+        ]
+
+        criteria_pattern = {
+            "item.waterLevel#1": {
+                "type": "greaterthan",
+                "pattern": 40,
+            },
+            "item.waterLevel#2": {
+                "type": "lessthan",
+                "pattern": 50,
+            },
+            "item.waterLevel#3": {
+                "type": "equals",
+                "pattern": 46,
+            },
+        }
+
+        result = op(payload, criteria_pattern, "all2any", self._test_function)
+        self.assertTrue(result)
+
+        criteria_pattern["item.waterLevel#2"]["type"] = "greaterthan"
+
+        result = op(payload, criteria_pattern, "all2any", self._test_function)
+        self.assertFalse(result)
+
+    def test_search_all(self):
+        # true if all payload items match all criteria items
+        op = operators.get_operator("search")
+        payload = [
+            {
+                "field_name": "waterLevel",
+                "to_value": 45,
+            },
+            {
+                "field_name": "waterLevel",
+                "to_value": 46,
+            },
+        ]
+
+        criteria_pattern = {
+            "item.waterLevel#1": {
+                "type": "greaterthan",
+                "pattern": 40,
+            },
+            "item.waterLevel#2": {
+                "type": "lessthan",
+                "pattern": 50,
+            },
+        }
+
+        result = op(payload, criteria_pattern, "all", self._test_function)
+        self.assertTrue(result)
+
+        payload[0]["to_value"] = 30
+
+        result = op(payload, criteria_pattern, "all", self._test_function)
+        self.assertFalse(result)
+
+        payload[0]["to_value"] = 45
+
+        criteria_pattern["item.waterLevel#3"] = {
+            "type": "equals",
+            "pattern": 46,
+        }
+
+        result = op(payload, criteria_pattern, "all", self._test_function)
+        self.assertFalse(result)
+
+    def test_search_payload_dict(self):
+        op = operators.get_operator("search")
+        payload = {
+            "field_name": "waterLevel",
+            "to_value": 45,
+        }
+
+        criteria_pattern = {
+            "item.waterLevel#1": {
+                "type": "greaterthan",
+                "pattern": 40,
+            },
+            "item.waterLevel#2": {
+                "type": "lessthan",
+                "pattern": 50,
+            },
+        }
+
+        result = op(payload, criteria_pattern, "all", self._test_function)
+        self.assertTrue(result)
+
+        payload["to_value"] = 30
+
+        result = op(payload, criteria_pattern, "all", self._test_function)
+        self.assertFalse(result)
+
+        payload["to_value"] = 45
+
+        criteria_pattern["item.waterLevel#3"] = {
+            "type": "equals",
+            "pattern": 46,
+        }
+
+        result = op(payload, criteria_pattern, "all", self._test_function)
+        self.assertFalse(result)
+
+
+class OperatorTest(unittest.TestCase):
     def test_matchwildcard(self):
         op = operators.get_operator("matchwildcard")
         self.assertTrue(op("v1", "v1"), "Failed matchwildcard.")
@@ -943,6 +1146,20 @@ class OperatorTest(unittest2.TestCase):
             "Passed test_timediff_lt with None as criteria_pattern.",
         )
 
+    def test_timediff_lt_webui_value(self):
+        op = operators.get_operator("timediff_lt")
+        self.assertTrue(
+            op(date_utils.get_datetime_utc_now().isoformat(), "10"),
+            "Failed test_timediff_lt_webui_value.",
+        )
+
+    def test_timediff_lt_webui_value_fail(self):
+        op = operators.get_operator("timediff_lt")
+        self.assertFalse(
+            op("2014-07-01T00:01:01.000000", "10"),
+            "Passed test_timediff_lt_webui_value.",
+        )
+
     def test_timediff_gt(self):
         op = operators.get_operator("timediff_gt")
         self.assertTrue(op("2014-07-01T00:01:01.000000", 1), "Failed test_timediff_gt.")
@@ -956,6 +1173,20 @@ class OperatorTest(unittest2.TestCase):
         self.assertFalse(
             op("2014-07-01T00:01:01.000000", None),
             "Passed test_timediff_gt with None as criteria_pattern.",
+        )
+
+    def test_timediff_gt_webui_value(self):
+        op = operators.get_operator("timediff_gt")
+        self.assertTrue(
+            op("2014-07-01T00:01:01.000000", "1"),
+            "Failed test_timediff_gt_webui_value.",
+        )
+
+    def test_timediff_gt_webui_value_fail(self):
+        op = operators.get_operator("timediff_gt")
+        self.assertFalse(
+            op(date_utils.get_datetime_utc_now().isoformat(), "10"),
+            "Passed test_timediff_gt_webui_value.",
         )
 
     def test_exists(self):
@@ -990,7 +1221,7 @@ class OperatorTest(unittest2.TestCase):
         self.assertTrue(op("a", "bcd"), "Should return True")
 
 
-class GetOperatorsTest(unittest2.TestCase):
+class GetOperatorsTest(unittest.TestCase):
     def test_get_operator(self):
         self.assertTrue(operators.get_operator("equals"))
         self.assertTrue(operators.get_operator("EQUALS"))

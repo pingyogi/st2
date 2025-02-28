@@ -22,11 +22,6 @@ from oslo_config import cfg
 
 import st2tests
 
-# XXX: actionsensor import depends on config being setup.
-import st2tests.config as tests_config
-
-tests_config.parse_args()
-
 from st2common.bootstrap import actionsregistrar
 from st2common.bootstrap import runnersregistrar
 from st2common.constants import action as ac_const
@@ -43,21 +38,15 @@ from st2common.transport import liveaction as lv_ac_xport
 from st2common.transport import workflow as wf_ex_xport
 from st2common.transport import publishers
 from st2common.util import date as date_utils
+from st2tests.fixtures.packs.core.fixture import PACK_PATH as CORE_PACK_PATH
+from st2tests.fixtures.packs.orquesta_tests.fixture import PACK_PATH as TEST_PACK_PATH
 from st2tests.mocks import liveaction as mock_lv_ac_xport
 from st2tests.mocks import workflow as mock_wf_ex_xport
 
 
 LOG = logging.getLogger(__name__)
 
-TEST_PACK = "orquesta_tests"
-TEST_PACK_PATH = (
-    st2tests.fixturesloader.get_fixtures_packs_base_path() + "/" + TEST_PACK
-)
-
-PACKS = [
-    TEST_PACK_PATH,
-    st2tests.fixturesloader.get_fixtures_packs_base_path() + "/core",
-]
+PACKS = [TEST_PACK_PATH, CORE_PACK_PATH]
 
 
 @mock.patch.object(

@@ -19,12 +19,9 @@ import datetime
 import mock
 import eventlet
 
-from st2tests import config as test_config
-
-test_config.parse_args()
-
 import st2common
 from st2tests import ExecutionDbTestCase
+from st2tests.fixtures.generic.fixture import PACK_NAME as PACK
 from st2tests.fixturesloader import FixturesLoader
 from st2tests.mocks.liveaction import MockLiveActionPublisherSchedulingQueueOnly
 
@@ -53,7 +50,6 @@ LIVE_ACTION = {
     "status": "requested",
 }
 
-PACK = "generic"
 TEST_FIXTURES = {
     "actions": ["action1.yaml", "action2.yaml"],
     "policies": ["policy_3.yaml", "policy_7.yaml"],

@@ -19,10 +19,22 @@ from astroid import parse, nodes
 
 import pylint.checkers.typecheck
 import pylint.testutils
+from pylint.interfaces import Confidence
 
 # merely importing this registers it in astroid
 # so parse() will use our predicate and transform functions.
-from . import api_models
+try:
+    # TODO: remove this once we remove the Makefile
+    from . import api_models
+
+    FIXTURE_MODULE_ACTION = "pylint_plugins.fixtures.api_models"
+    FIXTURE_MODULE_TRIGGER = "pylint_plugins.fixtures.api_models"
+except ImportError:
+    # pylint_plugins is on PYTHONPATH
+    import api_models
+
+    FIXTURE_MODULE_ACTION = "fixtures.api_models"
+    FIXTURE_MODULE_TRIGGER = "fixtures.api_models"
 
 
 def test_skiplist_class_gets_skipped():
@@ -130,12 +142,13 @@ def test_copied_schema():
 def test_copied_imported_schema():
     code = """
     import copy
-    from st2common.models.api.action import ActionAPI
+    from %s import ActionAPI
 
     class ActionCreateAPI(object):
         schema = copy.deepcopy(ActionAPI.schema)
         schema["properties"]["default_files"] = {}
     """
+    code = code % FIXTURE_MODULE_ACTION
 
     res = parse(code)
 
@@ -158,13 +171,14 @@ def test_copied_imported_schema():
 def test_indirect_copied_schema():
     code = """
     import copy
-    from st2common.models.api.action import ActionAPI
+    from %s import ActionAPI
 
     REQUIRED_ATTR_SCHEMAS = {"action": copy.deepcopy(ActionAPI.schema)}
 
     class ExecutionAPI(object):
         schema = {"properties": {"action": REQUIRED_ATTR_SCHEMAS["action"]}}
     """
+    code = code % FIXTURE_MODULE_ACTION
 
     res = parse(code)
 
@@ -182,11 +196,12 @@ def test_indirect_copied_schema():
 
 def test_inlined_schema():
     code = """
-    from st2common.models.api.trigger import TriggerAPI
+    from %s import TriggerAPI
 
     class ActionExecutionAPI(object):
         schema = {"properties": {"trigger": TriggerAPI.schema}}
     """
+    code = code % FIXTURE_MODULE_TRIGGER
 
     res = parse(code)
 
@@ -287,10 +302,17 @@ class TestTypeChecker(pylint.testutils.CheckerTestCase):
 
         # accessing a property NOT defined in the schema
         with self.assertAddsMessages(
-            pylint.testutils.Message(
+            pylint.testutils.MessageTest(
                 msg_id="no-member",  # E1101
                 args=("Instance of", "TestAPI", "missing", ""),
                 node=assign_node_missing.value,
+                line=assign_node_missing.value.lineno,
+                col_offset=assign_node_missing.value.col_offset,
+                end_line=assign_node_missing.value.end_lineno,
+                end_col_offset=assign_node_missing.value.end_col_offset,
+                confidence=Confidence(
+                    name="INFERENCE", description="Warning based on inference result."
+                ),
             )
         ):
             self.checker.visit_attribute(assign_node_missing.value)

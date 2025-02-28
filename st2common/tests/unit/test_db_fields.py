@@ -20,9 +20,15 @@ import datetime
 import calendar
 
 import mock
-import unittest2
+import unittest
 import orjson
 import zstandard
+
+# pytest: make sure monkey_patching happens before importing mongoengine
+from st2common.util.monkey_patch import monkey_patch
+
+monkey_patch()
+
 import mongoengine as me
 
 from st2common.fields import ComplexDateTimeField
@@ -72,7 +78,7 @@ class ModelWithJSONDictFieldDB(stormbase.StormFoundationDB):
 ModelJsonDictFieldAccess = MongoDBAccess(ModelWithJSONDictFieldDB)
 
 
-class JSONDictFieldTestCase(unittest2.TestCase):
+class JSONDictFieldTestCase(unittest.TestCase):
     def test_set_to_mongo(self):
         field = JSONDictField(use_header=False)
         result = field.to_mongo({"test": {1, 2}})
@@ -141,7 +147,7 @@ class JSONDictFieldTestCase(unittest2.TestCase):
         self.assertEqual(result, {"c": "d"})
 
 
-class JSONDictFieldTestCaseWithHeader(unittest2.TestCase):
+class JSONDictFieldTestCaseWithHeader(unittest.TestCase):
     def test_to_mongo_no_compression(self):
         field = JSONDictField(use_header=True)
 
@@ -509,7 +515,7 @@ class JSONDictEscapedFieldCompatibilityFieldTestCase(DbTestCase):
         self.assertEqual(retrieved_model_db.result, expected_result)
 
 
-class ComplexDateTimeFieldTestCase(unittest2.TestCase):
+class ComplexDateTimeFieldTestCase(unittest.TestCase):
     def test_what_comes_in_goes_out(self):
         field = ComplexDateTimeField()
 

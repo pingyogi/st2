@@ -14,13 +14,13 @@
 # limitations under the License.
 
 from __future__ import absolute_import
-import unittest2
+import unittest
 
 from jsonschema.exceptions import ValidationError
 from st2common.models.system import actionchain
+from st2tests.fixtures.generic.fixture import PACK_NAME as FIXTURES_PACK
 from st2tests.fixturesloader import FixturesLoader
 
-FIXTURES_PACK = "generic"
 TEST_FIXTURES = {
     "actionchains": [
         "chain1.yaml",
@@ -40,7 +40,7 @@ CHAIN_WITH_VARS = FIXTURES["actionchains"]["chain_with_vars.yaml"]
 CHAIN_WITH_PUBLISH = FIXTURES["actionchains"]["chain_with_publish.yaml"]
 
 
-class ActionChainSchemaTest(unittest2.TestCase):
+class ActionChainSchemaTest(unittest.TestCase):
     def test_actionchain_schema_valid(self):
         chain = actionchain.ActionChain(**CHAIN_1)
         self.assertEqual(len(chain.chain), len(CHAIN_1["chain"]))

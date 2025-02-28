@@ -16,6 +16,10 @@
 from __future__ import absolute_import
 import ctypes
 import hashlib
+import sys
+
+# TODO: Move keywords directly to hashlib.md5 call as part of dropping py3.8.
+hashlib_kwargs = {} if sys.version_info[0:2] < (3, 9) else {"usedforsecurity": False}
 
 from st2reactor.container.partitioners import (
     DefaultPartitioner,
@@ -35,7 +39,7 @@ class Range(object):
     RANGE_MIN_VALUE = 0
 
     RANGE_MAX_ENUM = "max"
-    RANGE_MAX_VALUE = 2 ** 32
+    RANGE_MAX_VALUE = 2**32
 
     def __init__(self, range_repr):
         self.range_start, self.range_end = self._get_range_boundaries(range_repr)
@@ -107,8 +111,10 @@ class HashPartitioner(DefaultPartitioner):
 
         # From http://www.cs.hmc.edu/~geoff/classes/hmc.cs070.200101/homework10/hashfuncs.html
         # The 'liberal' use of ctypes.c_unit is to guarantee unsigned integer and workaround
-        # inifinite precision.
-        md5_hash = hashlib.md5(sensor_ref.encode())
+        # infinite precision.
+        md5_hash = hashlib.md5(
+            sensor_ref.encode(), **hashlib_kwargs
+        )  # nosec. remove nosec after py3.8 drop
         md5_hash_int_repr = int(md5_hash.hexdigest(), 16)
         h = ctypes.c_uint(0)
         for d in reversed(str(md5_hash_int_repr)):

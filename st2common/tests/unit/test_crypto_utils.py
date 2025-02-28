@@ -23,8 +23,8 @@ import six
 import json
 import binascii
 
-import unittest2
-from unittest2 import TestCase
+import pytest
+from unittest import TestCase
 from six.moves import range
 from cryptography.exceptions import InvalidSignature
 
@@ -38,11 +38,9 @@ from st2common.util.crypto import keyczar_symmetric_encrypt
 from st2common.util.crypto import cryptography_symmetric_encrypt
 from st2common.util.crypto import cryptography_symmetric_decrypt
 
-from st2tests.fixturesloader import get_fixtures_base_path
+from st2tests.fixtures.keyczar_keys.fixture import FIXTURE_PATH as KEY_FIXTURES_PATH
 
 __all__ = ["CryptoUtilsTestCase", "CryptoUtilsKeyczarCompatibilityTestCase"]
-
-KEY_FIXTURES_PATH = os.path.join(get_fixtures_base_path(), "keyczar_keys/")
 
 
 class CryptoUtilsTestCase(TestCase):
@@ -113,7 +111,7 @@ class CryptoUtilsTestCase(TestCase):
 
         # Verify corrupted value results in an excpetion
         expected_msg = "Invalid or malformed ciphertext"
-        self.assertRaisesRegexp(
+        self.assertRaisesRegex(
             ValueError,
             expected_msg,
             cryptography_symmetric_decrypt,
@@ -138,7 +136,7 @@ class CryptoUtilsTestCase(TestCase):
 
         # Verify corrupted value results in an excpetion
         expected_msg = "Signature did not match digest"
-        self.assertRaisesRegexp(
+        self.assertRaisesRegex(
             InvalidSignature,
             expected_msg,
             cryptography_symmetric_decrypt,
@@ -156,7 +154,7 @@ class CryptoUtilsKeyczarCompatibilityTestCase(TestCase):
     def test_aes_key_class(self):
         # 1. Unsupported mode
         expected_msg = "Unsupported mode: EBC"
-        self.assertRaisesRegexp(
+        self.assertRaisesRegex(
             ValueError,
             expected_msg,
             AESKey,
@@ -168,7 +166,7 @@ class CryptoUtilsKeyczarCompatibilityTestCase(TestCase):
 
         # 2. AES key is too small
         expected_msg = "Unsafe key size: 64"
-        self.assertRaisesRegexp(
+        self.assertRaisesRegex(
             ValueError,
             expected_msg,
             AESKey,
@@ -257,7 +255,7 @@ class CryptoUtilsKeyczarCompatibilityTestCase(TestCase):
 
             self.assertEqual(decrypted, plaintext)
 
-    @unittest2.skipIf(six.PY3, "keyczar doesn't work under Python 3")
+    @pytest.mark.skipif(six.PY3, reason="keyczar doesn't work under Python 3")
     def test_symmetric_encrypt_decrypt_roundtrips_1(self):
         encrypt_keys = [
             AESKey.generate(),

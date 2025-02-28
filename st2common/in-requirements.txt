@@ -12,8 +12,8 @@ mongoengine
 networkx
 # used by networkx
 decorator
-git+https://github.com/StackStorm/orquesta.git@v1.5.0#egg=orquesta
-git+https://github.com/StackStorm/st2-rbac-backend.git@master#egg=st2-rbac-backend
+orquesta@ git+https://github.com/StackStorm/orquesta.git@5ba1467614b2ef8b4709b2ca89e68baa671e8975
+st2-rbac-backend@ git+https://github.com/StackStorm/st2-rbac-backend.git@master
 oslo.config
 paramiko
 pyyaml
@@ -24,9 +24,12 @@ zstandard
 cffi
 cryptography
 requests
+# urllib3 is a transitive dep
+urllib3
 retrying
 semver
 six
+tenacity
 tooz
 # Required by tooz - on new versions of tooz, all the backend dependencies need
 # to be installed manually
@@ -37,8 +40,9 @@ routes
 flex
 webob
 jsonpath-rw
+pyOpenSSL
 python-statsd
-udatetime
+ciso8601
 orjson
 # Note: amqp is used by kombu, this needs to be added here to be picked up by
 # requirements fixate script.
@@ -49,3 +53,5 @@ gitdb
 lockfile
 # needed by requests
 chardet
+# needed by kombu (dh_virtualenv on ubuntu focal is failing to put tzdata in the wheelhouse)
+backports.zoneinfo[tzdata]; python_version<"3.9"

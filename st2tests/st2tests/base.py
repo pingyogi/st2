@@ -16,6 +16,8 @@
 from __future__ import absolute_import
 from __future__ import print_function
 
+from unittest.result import TestResult
+
 # NOTE: We need to perform monkeypatch before importing ssl module otherwise tests will fail.
 # See https://github.com/StackStorm/st2/pull/4834 for details
 from st2common.util.monkey_patch import monkey_patch
@@ -38,8 +40,8 @@ import eventlet
 import psutil
 import mock
 from oslo_config import cfg
-from unittest2 import TestCase
-import unittest2
+from unittest import TestCase
+import unittest
 
 from orquesta import conducting
 from orquesta import events
@@ -137,7 +139,7 @@ BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 TESTS_CONFIG_PATH = os.path.join(BASE_DIR, "../conf/st2.conf")
 
 
-class RunnerTestCase(unittest2.TestCase):
+class RunnerTestCase(unittest.TestCase):
     meta_loader = MetaLoader()
 
     def assertCommonSt2EnvVarsAvailableInEnv(self, env):
@@ -316,7 +318,16 @@ class DbTestCase(BaseDbTestCase):
     def tearDownClass(cls):
         drop_db = True
 
-        if cls.current_result.errors or cls.current_result.failures:
+        # TODO: pytst does not make results available to fixtures by default.
+        #       we might be able to add a hook+class fixture to help with this, but
+        #       that adds quite a bit of complexity. For now, pytest will always drop the db.
+        #       https://docs.pytest.org/en/stable/example/simple.html#making-test-result-information-available-in-fixtures
+        #       When someone does decide to tackle this, we will probably need to rename the db
+        #       for later inspection so subsequent tests still have a clean starting point as
+        #       pytest will not necessarily stop on failure like nosetest did.
+        if cls.current_result and (
+            cls.current_result.errors or cls.current_result.failures
+        ):
             # Don't drop DB on test failure
             drop_db = False
 
@@ -325,8 +336,11 @@ class DbTestCase(BaseDbTestCase):
 
     def run(self, result=None):
         # Remember result for use in tearDown and tearDownClass
-        self.current_result = result
-        self.__class__.current_result = result
+        # pytest sets result to _pytest.unittest.TestCaseFunction
+        # which does not have attributes: errors, failures
+        if isinstance(result, TestResult):
+            self.current_result = result
+            self.__class__.current_result = result
         super(DbTestCase, self).run(result=result)
 
 
@@ -551,6 +565,11 @@ class IntegrationTestCase(TestCase):
 
     processes = {}
 
+    @classmethod
+    def setUpClass(cls):
+        # this prepares the vars for use in configuring the subprocesses via env var
+        tests_config.parse_args()
+
     def setUp(self):
         super(IntegrationTestCase, self).setUp()
         self._stop_running_processes()
@@ -585,7 +604,7 @@ class IntegrationTestCase(TestCase):
                 except:
                     stderr = None
 
-                print("Stopping process with pid %s" % (process.id))
+                print("Stopping process with pid %s" % (process.pid))
                 print('Process "%s"' % (process.pid))
                 print("Stdout: %s" % (stdout))
                 print("Stderr: %s" % (stderr))

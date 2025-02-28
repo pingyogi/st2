@@ -14,14 +14,15 @@
 # limitations under the License.
 
 from __future__ import absolute_import
-import unittest2
+import unittest
 
 from st2common.models.db.pack import PackDB
 from st2common.util.pack import get_pack_common_libs_path_for_pack_db
 from st2common.util.pack import get_pack_warnings
+from st2common.util.pack import get_pack_ref_from_metadata
 
 
-class PackUtilsTestCase(unittest2.TestCase):
+class PackUtilsTestCase(unittest.TestCase):
     def test_get_pack_common_libs_path_for_pack_db(self):
         pack_model_args = {
             "name": "Yolo CI",
@@ -66,3 +67,21 @@ class PackUtilsTestCase(unittest2.TestCase):
         pack_metadata = {"name": "PackNone"}
         warning = get_pack_warnings(pack_metadata)
         self.assertEqual(None, warning)
+
+    def test_get_pack_ref_from_meta_name_valid(self):
+        pack_metadata = {"name": "pack1"}
+        pack_ref = get_pack_ref_from_metadata(pack_metadata)
+        self.assertEqual("pack1", pack_ref)
+
+    def test_get_pack_ref_from_meta_ref_valid(self):
+        pack_metadata = {"name": "Pack1", "ref": "pack1"}
+        pack_ref = get_pack_ref_from_metadata(pack_metadata)
+        self.assertEqual("pack1", pack_ref)
+
+    def test_get_pack_ref_from_meta_ref_global(self):
+        pack_metadata = {"name": "Pack1", "ref": "_global"}
+        self.assertRaises(ValueError, get_pack_ref_from_metadata, pack_metadata)
+
+    def test_get_pack_ref_from_meta_name_global(self):
+        pack_metadata = {"name": "_global"}
+        self.assertRaises(ValueError, get_pack_ref_from_metadata, pack_metadata)

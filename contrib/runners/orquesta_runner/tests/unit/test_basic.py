@@ -21,6 +21,7 @@ import mock
 import six
 
 from orquesta import statuses as wf_statuses
+from oslo_config import cfg
 
 import st2tests
 
@@ -48,19 +49,13 @@ from st2common.services import workflows as wf_svc
 from st2common.transport import liveaction as lv_ac_xport
 from st2common.transport import workflow as wf_ex_xport
 from st2common.transport import publishers
+from st2tests.fixtures.packs.core.fixture import PACK_PATH as CORE_PACK_PATH
+from st2tests.fixtures.packs.orquesta_tests.fixture import PACK_PATH as TEST_PACK_PATH
 from st2tests.mocks import liveaction as mock_lv_ac_xport
 from st2tests.mocks import workflow as mock_wf_ex_xport
 
 
-TEST_PACK = "orquesta_tests"
-TEST_PACK_PATH = (
-    st2tests.fixturesloader.get_fixtures_packs_base_path() + "/" + TEST_PACK
-)
-
-PACKS = [
-    TEST_PACK_PATH,
-    st2tests.fixturesloader.get_fixtures_packs_base_path() + "/core",
-]
+PACKS = [TEST_PACK_PATH, CORE_PACK_PATH]
 
 
 @mock.patch.object(
@@ -114,7 +109,7 @@ class OrquestaRunnerTest(st2tests.ExecutionDbTestCase):
         runners_utils, "invoke_post_run", mock.MagicMock(return_value=None)
     )
     def test_run_workflow(self):
-        username = "stanley"
+        username = cfg.CONF.system_user.user
         wf_meta = base.get_wf_fixture_meta_data(TEST_PACK_PATH, "sequential.yaml")
         wf_input = {"who": "Thanos"}
         lv_ac_db = lv_db_models.LiveActionDB(

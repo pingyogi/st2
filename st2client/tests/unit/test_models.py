@@ -17,7 +17,7 @@ from __future__ import absolute_import
 import mock
 import json
 import logging
-import unittest2
+import unittest
 
 from tests import base
 
@@ -28,7 +28,7 @@ from st2client.utils import httpclient
 LOG = logging.getLogger(__name__)
 
 
-class TestSerialization(unittest2.TestCase):
+class TestSerialization(unittest.TestCase):
     def test_resource_serialize(self):
         instance = base.FakeResource(id="123", name="abc")
         self.assertDictEqual(instance.serialize(), base.RESOURCES[0])
@@ -39,7 +39,7 @@ class TestSerialization(unittest2.TestCase):
         self.assertEqual(instance.name, "abc")
 
 
-class TestResourceManager(unittest2.TestCase):
+class TestResourceManager(unittest.TestCase):
     @mock.patch.object(
         httpclient.HTTPClient,
         "get",
@@ -471,3 +471,20 @@ class TestResourceManager(unittest2.TestCase):
         mgr = models.ResourceManager(base.FakeResource, base.FAKE_ENDPOINT)
         source_ref = "spack.saction"
         self.assertRaises(Exception, mgr.clone, source_ref, "dpack", "daction")
+
+
+class TestKeyValuePairResourceManager(unittest.TestCase):
+    @mock.patch.object(
+        httpclient.HTTPClient,
+        "get",
+        mock.MagicMock(
+            return_value=base.FakeResponse(json.dumps(base.RESOURCES[0]), 200, "OK")
+        ),
+    )
+    def test_resource_get_by_name(self):
+        mgr = models.KeyValuePairResourceManager(base.FakeResource, base.FAKE_ENDPOINT)
+        # No X-Total-Count
+        resource = mgr.get_by_name("abc")
+        actual = resource.serialize()
+        expected = json.loads(json.dumps(base.RESOURCES[0]))
+        self.assertEqual(actual, expected)

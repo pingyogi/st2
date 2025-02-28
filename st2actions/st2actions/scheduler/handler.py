@@ -173,9 +173,12 @@ class ActionExecutionSchedulingQueueHandler(object):
                         )
                     )
                 except db_exc.StackStormDBObjectWriteConflictError:
-                    msg = '[%s] Item "%s" is currently being processed by another scheduler.' % (
-                        execution_queue_item_db.action_execution_id,
-                        str(execution_queue_item_db.id),
+                    msg = (
+                        '[%s] Item "%s" is currently being processed by another scheduler.'
+                        % (
+                            execution_queue_item_db.action_execution_id,
+                            str(execution_queue_item_db.id),
+                        )
                     )
                     LOG.error(msg)
                     raise Exception(msg)
@@ -287,7 +290,7 @@ class ActionExecutionSchedulingQueueHandler(object):
         if action_has_policies_require_lock:
             # Warn users that the coordination service is not configured.
             if not coordination_service.configured():
-                LOG.warn(
+                LOG.warning(
                     "[%s] Coordination backend is not configured. "
                     "Policy enforcement is best effort.",
                     action_execution_id,
